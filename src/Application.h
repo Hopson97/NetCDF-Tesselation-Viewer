@@ -14,7 +14,19 @@
 #include "Settings.h"
 #include "Util/Maths.h"
 
+const std::filesystem::path HEIGHTMAP = "./assets/textures/iceland.png";
+
 class Keyboard;
+
+struct TessellationSettings
+{
+    float height_scale = 16.0f;
+    float height_offset = 16.0f;
+    float min_distance = 20;
+    float max_distance = 400;
+    int min_tess_level = 4;
+    int max_tess_level = 64;
+};
 
 class Application
 {
@@ -44,7 +56,7 @@ class Application
     gl::Shader scene_shader_;
     gl::Shader terrain_shader_;
 
-    Mesh3D terrain_mesh_ = generate_patch_terrain_mesh("./assets/textures/england.png", 20);
+    Mesh3D terrain_mesh_ = generate_patch_terrain_mesh(HEIGHTMAP, 32);
     gl::Texture2D terrain_heightmap_;
 
     Mesh3D box_mesh_ = generate_cube_mesh({1.0f, 1.0f, 1.0f});
@@ -58,4 +70,6 @@ class Application
     Model model_;
     CameraKeybinds camera_keybinds_;
     CameraControllerOptions camera_options_;
+
+    TessellationSettings tess_settings_;
 };

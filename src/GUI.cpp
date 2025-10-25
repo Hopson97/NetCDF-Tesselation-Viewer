@@ -73,37 +73,9 @@ namespace GUI
             ImGui::Text("Rotation: (%f, %f, %f)", r.x, r.y, r.z);
 
             ImGui::Separator();
-            ImGui::Checkbox("Grass ground texture?", &settings.use_grass_texture);
-            ImGui::Checkbox("Enable 'flashlight'?", &settings.use_flashlight);
             ImGui::Checkbox("Wireframe rendering?", &settings.wireframe);
 
             ImGui::Separator();
-
-            ImGui::PushID("DirLight");
-            ImGui::Text("Directional light");
-            if (ImGui::SliderFloat3("Direction", &settings.lights.directional.direction[0], -1.0, 1.0))
-            {
-                settings.lights.directional.direction = glm::normalize(settings.lights.directional.direction);
-            }
-            base_light_widgets(settings.lights.directional);
-            ImGui::PopID();
-
-            ImGui::Separator();
-
-            ImGui::PushID("PointLight");
-            ImGui::Text("Point light");
-            base_light_widgets(settings.lights.pointlight);
-            attenuation_widgets(settings.lights.pointlight.att);
-            ImGui::PopID();
-
-            ImGui::Separator();
-
-            ImGui::PushID("SpotLight");
-            ImGui::Text("Spot light");
-            ImGui::SliderFloat("Cutoff", &settings.lights.spotlight.cutoff, 0.0, 90.0f);
-            base_light_widgets(settings.lights.spotlight);
-            attenuation_widgets(settings.lights.spotlight.att);
-            ImGui::PopID();
         }
         // clang-format on
 
@@ -142,9 +114,6 @@ void SpriteRenderer::render(const gl::Texture2D& texture, glm::vec2 position, gl
     shader_.set_uniform("transform", model);
 
     auto view_matrix = glm::lookAt(glm::vec3{0, 0, 10}, {0, 0, 0}, {0, 1, 0});
-
-
-
 
     shader_.set_uniform("transform", model);
     shader_.set_uniform("view_matrix", view_matrix);

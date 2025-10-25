@@ -136,7 +136,9 @@ namespace gl
                                      GLsizei levels, TextureParameters filters,
                                      TextureInternalFormat internal_format, TextureFormat format)
     {
-
+        GLint maxSize = 0;
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+        std::cout << "Max texture size: " << maxSize << std::endl;
         // Allocate the storage
         glTextureStorage2D(id, levels, static_cast<GLenum>(format), width, height);
 

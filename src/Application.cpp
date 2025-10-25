@@ -37,7 +37,12 @@ bool Application::init()
     // -----------------------
     if (!grass_material_.load_from_file("assets/textures/grass.png", 8, false, false) ||
         !crate_material_.load_from_file("assets/textures/crate.png", 8, false, false) ||
-        !terrain_heightmap_.load_from_file("./assets/textures/england.png", 8, false, false))
+        !terrain_heightmap_.load_from_file(
+            HEIGHTMAP, 8, false, false,
+            gl::TextureParameters{.min_filter = gl::TextureMinFilter::Nearest,
+                                  .mag_filter = gl::TextureMagFilter::Nearest,
+                                  .wrap_s = gl::TextureWrap::ClampToEdge,
+                                  .wrap_t = gl::TextureWrap::ClampToEdge}))
     {
         return false;
     }
@@ -146,6 +151,17 @@ void Application::on_render(bool show_debug_info)
         p_active_camera_->gui("Camera");
     }
 
+    if (ImGui::Begin("Tessellation Settings"))
+    {
+        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 1.0f, 128.0f);
+        ImGui::SliderFloat("Height Offset", &tess_settings_.height_offset, 1.0f, 128.0f);
+        ImGui::SliderFloat("Min Distance", &tess_settings_.min_distance, 1.0f, 1000.0f);
+        ImGui::SliderFloat("Max Distance", &tess_settings_.max_distance, 1.0f, 1000.0f);
+        ImGui::SliderInt("Min Level", &tess_settings_.min_tess_level, 1, 128);
+        ImGui::SliderInt("Max Level", &tess_settings_.max_tess_level, 1, 256);
+    }
+    ImGui::End();
+
     if (ImGui::Begin("Camera"))
     {
         if (ImGui::Button("Use Perspective"))
@@ -167,11 +183,18 @@ void Application::on_render(bool show_debug_info)
     render_scene(scene_shader_);
 
     terrain_shader_.bind();
+    terrain_shader_.set_uniform("view_matrix", p_active_camera_->get_view_matrix());
     terrain_shader_.set_uniform("model_matrix", create_model_matrix({.position = {0, 0, 0}}));
+    terrain_shader_.set_uniform("height_offset", tess_settings_.height_offset);
+    terrain_shader_.set_uniform("height_scale", tess_settings_.height_scale);
+    terrain_shader_.set_uniform("min_distance", tess_settings_.min_distance);
+    terrain_shader_.set_uniform("max_distance", tess_settings_.max_distance);
+    terrain_shader_.set_uniform("min_tess_level", tess_settings_.min_tess_level);
+    terrain_shader_.set_uniform("max_tess_level", tess_settings_.max_tess_level);
     terrain_heightmap_.bind(0);
     terrain_mesh_.bind();
 
-    glDrawArrays(GL_PATCHES, 0, 4 * 20 * 20);
+    glDrawArrays(GL_PATCHES, 0, 4 * 32 * 32);
 
     // Ensure GUI etc are rendered using fill
     gl::polygon_mode(gl::Face::FrontAndBack, gl::PolygonMode::Fill);

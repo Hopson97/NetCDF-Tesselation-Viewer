@@ -1,0 +1,291 @@
+#include "Mesh.h"
+
+#include <numeric>
+
+#include <SFML/Graphics/Image.hpp>
+
+const InstanceBatch& InstanceBatch::bind() const
+{
+    mesh.bind();
+    return *this;
+}
+
+void InstanceBatch::buffer()
+{
+    mesh.buffer();
+    transform_vbo_.reset();
+    transform_vbo_.buffer_data(transforms);
+    mesh.vao()
+        .add_vertex_buffer(transform_vbo_, sizeof(glm::mat4))
+        .add_instance_attribute(4, GL_FLOAT, sizeof(glm::vec4), 1, 4);
+}
+
+void InstanceBatch::draw_elements(GLenum draw_mode) const
+{
+    glDrawElementsInstanced(draw_mode, mesh.indices_count(), GL_UNSIGNED_INT, nullptr,
+                            transforms.size());
+}
+
+void InstanceBatch::update()
+{
+}
+
+// -----------------------------------
+// ==== MESH GENERATION FUNCTIONS ====
+// -----------------------------------
+
+Mesh3D generate_quad_mesh(float w, float h)
+{
+    Mesh3D mesh;
+    mesh.vertices = {{{w, h, 0.0f}, {0.0f, 1.0f}, {0, 0, 1}},
+                     {{0, h, 0.0f}, {1.0f, 1.0f}, {0, 0, 1}},
+                     {{0, 0, 0.0f}, {1.0f, 0.0f}, {0, 0, 1}},
+                     {{w, 0, 0.0f}, {0.0f, 0.0f}, {0, 0, 1}}
+
+    };
+
+    mesh.indices = {0, 1, 2, 2, 3, 0};
+
+    return mesh;
+}
+
+Mesh3D generate_cube_mesh(const glm::vec3& dimensions, bool repeat_texture)
+{
+    Mesh3D mesh;
+
+    float w = dimensions.x;
+    float h = dimensions.y;
+    float d = dimensions.z;
+
+    float txrx = repeat_texture ? w : 1.0f;
+    float txry = repeat_texture ? h : 1.0f;
+
+    // clang-format off
+    mesh.vertices = {
+        {{w, h, d}, {txrx, 0.0f}, {0.0f, 0.0f, 1.0f}},  
+        {{0, h, d}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{0, 0, d}, {0.0f, txry}, {0.0f, 0.0f, 1.0f}},  
+        {{w, 0, d}, {txrx, txry}, {0.0f, 0.0f, 1.0f}},
+
+        {{0, h, d}, {txrx, 0.0f}, {-1.0f, 0.0f, 0.0f}}, 
+        {{0, h, 0}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}},
+        {{0, 0, 0}, {0.0f, txry}, {-1.0f, 0.0f, 0.0f}}, 
+        {{0, 0, d}, {txrx, txry}, {-1.0f, 0.0f, 0.0f}},
+
+        {{0, h, 0}, {txrx, 0.0f}, {0.0f, 0.0f, -1.0f}}, 
+        {{w, h, 0}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}},
+        {{w, 0, 0}, {0.0f, txry}, {0.0f, 0.0f, -1.0f}}, 
+        {{0, 0, 0}, {txrx, txry}, {0.0f, 0.0f, -1.0f}},
+
+        {{w, h, 0}, {txrx, 0.0f}, {1.0f, 0.0f, 0.0f}},  
+        {{w, h, d}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{w, 0, d}, {0.0f, txry}, {1.0f, 0.0f, 0.0f}},  
+        {{w, 0, 0}, {txrx, txry}, {1.0f, 0.0f, 0.0f}},
+
+        {{w, h, 0}, {txrx, 0.0f}, {0.0f, 1.0f, 0.0f}},  
+        {{0, h, 0}, {0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{0, h, d}, {0.0f, txry}, {0.0f, 1.0f, 0.0f}},  
+        {{w, h, d}, {txrx, txry}, {0.0f, 1.0f, 0.0f}},
+
+        {{0, 0, 0}, {txrx, 0.0f}, {0.0f, -1.0f, 0.0f}}, 
+        {{w, 0, 0}, {0.0f, 0.0f}, {0.0f, -1.0f, 0.0f}},
+        {{w, 0, d}, {0.0f, txry}, {0.0f, -1.0f, 0.0f}}, 
+        {{0, 0, d}, {txrx, txry}, {0.0f, -1.0f, 0.0f}},
+    };
+    // clang-format on
+
+    int index = 0;
+    for (int i = 0; i < 6; i++)
+    {
+        mesh.indices.push_back(index);
+        mesh.indices.push_back(index + 1);
+        mesh.indices.push_back(index + 2);
+        mesh.indices.push_back(index + 2);
+        mesh.indices.push_back(index + 3);
+        mesh.indices.push_back(index);
+        index += 4;
+    }
+
+    return mesh;
+}
+
+Mesh3D generate_centered_cube_mesh(const glm::vec3& dimensions)
+{
+    Mesh3D mesh;
+
+    float w = dimensions.x;
+    float h = dimensions.y;
+    float d = dimensions.z;
+
+    // clang-format off
+    mesh.vertices = {
+        {{w, h, d}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},  
+        {{-w, h, d}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{-w, -h, d}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},  
+        {{w, -h, d}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+
+        {{-w, h, d}, {1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}}, 
+        {{-w, h, -d}, {0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}},
+        {{-w, -h, -d}, {0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f}}, 
+        {{-w, -h, d}, {1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f}},
+
+        {{-w, h, -d}, {1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}}, 
+        {{w, h, -d}, {0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}},
+        {{w, -h, -d}, {0.0f, 1.0f}, {0.0f, 0.0f, -1.0f}}, 
+        {{-w, -h, -d}, {1.0f, 1.0f}, {0.0f, 0.0f, -1.0f}},
+
+        {{w, h, -d}, {1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},  
+        {{w, h, d}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{w, -h, d}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},  
+        {{w, -h, -d}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+
+        {{w, h, -d}, {1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},  
+        {{-w, h, -d}, {0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{-w, h, d}, {0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},  
+        {{w, h, d}, {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}},
+
+        {{-w, -h, -d}, {1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}}, 
+        {{w, -h, -d}, {0.0f, 0.0f}, {0.0f, -1.0f, 0.0f}},
+        {{w, -h, d}, {0.0f, 1.0f}, {0.0f, -1.0f, 0.0f}}, 
+        {{-w, -h, d}, {1.0f, 1.0f}, {0.0f, -1.0f, 0.0f}},
+    };
+    // clang-format on
+
+    int index = 0;
+    for (int i = 0; i < 6; i++)
+    {
+        mesh.indices.push_back(index);
+        mesh.indices.push_back(index + 1);
+        mesh.indices.push_back(index + 2);
+        mesh.indices.push_back(index + 2);
+        mesh.indices.push_back(index + 3);
+        mesh.indices.push_back(index);
+        index += 4;
+    }
+
+    return mesh;
+}
+
+Mesh3D generate_terrain_mesh(int size, int edgeVertices)
+{
+    float fEdgeVertexCount = static_cast<float>(edgeVertices);
+
+    Mesh3D mesh;
+    for (int z = 0; z < edgeVertices; z++)
+    {
+        for (int x = 0; x < edgeVertices; x++)
+        {
+            GLfloat fz = static_cast<GLfloat>(z);
+            GLfloat fx = static_cast<GLfloat>(x);
+
+            Vertex vertex;
+            vertex.position.x = fx / fEdgeVertexCount * size;
+            vertex.position.y = 0.0f;
+            vertex.position.z = fz / fEdgeVertexCount * size;
+
+            vertex.texture_coord.s = (fx / fEdgeVertexCount) * edgeVertices / 4.0f;
+            vertex.texture_coord.t = (fz / fEdgeVertexCount) * edgeVertices / 4.0f;
+
+            vertex.normal = {0, 1, 0};
+
+            mesh.vertices.push_back(vertex);
+        }
+    }
+
+    for (int z = 0; z < edgeVertices - 1; z++)
+    {
+        for (int x = 0; x < edgeVertices - 1; x++)
+        {
+            int topLeft = (z * edgeVertices) + x;
+            int topRight = topLeft + 1;
+            int bottomLeft = ((z + 1) * edgeVertices) + x;
+            int bottomRight = bottomLeft + 1;
+
+            mesh.indices.push_back(topLeft);
+            mesh.indices.push_back(bottomLeft);
+            mesh.indices.push_back(topRight);
+            mesh.indices.push_back(topRight);
+            mesh.indices.push_back(bottomLeft);
+            mesh.indices.push_back(bottomRight);
+        }
+    }
+
+    return mesh;
+}
+
+HeightMapTerrain generate_terrain_mesh_height_map(const std::filesystem::path& height_map_path)
+{
+    sf::Image height_map{height_map_path};
+
+    auto width = height_map.getSize().x;
+    auto height = height_map.getSize().y;
+
+    HeightMapTerrain terrain;
+    terrain.num_strips = height - 1;
+    terrain.vertices_per_strip = width * 2;
+
+    float scale = 64.0f / 512.0f;
+    float offset = 16.0f;
+
+    for (unsigned y = 0; y < height; y++)
+    {
+        for (unsigned x = 0; x < width; x++)
+        {
+            auto height = height_map.getPixel({x, y}).r;
+            Vertex vertex;
+            vertex.position = {x, height * scale - offset, y};
+            terrain.mesh.vertices.push_back(vertex);
+        };
+    }
+
+    for (unsigned i = 0; i < height - 1; i++)
+    {
+        for (unsigned j = 0; j < width; j++)
+        {
+            for (unsigned k = 0; k < 2; k++)
+            {
+                terrain.mesh.indices.push_back(j + width * (i + k));
+            }
+        }
+    }
+
+    return terrain;
+}
+
+Mesh3D generate_patch_terrain_mesh(const std::filesystem::path& height_map_path, float num_patches)
+{
+    Mesh3D mesh;
+
+    sf::Image height_map{height_map_path};
+
+    auto width = height_map.getSize().x;
+    auto height = height_map.getSize().y;
+
+    for (float y = 0; y < num_patches - 1; y++)
+    {
+        for (float x = 0; x < num_patches - 1; x++)
+        {
+            mesh.vertices.push_back(Vertex{
+                .position = {width * x / num_patches, 0.0f, height * y / num_patches},
+                .texture_coord = {x / num_patches, y / num_patches},
+            });
+
+            mesh.vertices.push_back(Vertex{
+                .position = {width * (x + 1) / num_patches, 0.0f, height * y / num_patches},
+                .texture_coord = {(x + 1) / num_patches, y / num_patches},
+            });
+
+            mesh.vertices.push_back(Vertex{
+                .position = {width * x / num_patches, 0.0f, height * (y + 1) / num_patches},
+                .texture_coord = {x / num_patches, (y + 1) / num_patches},
+            });
+
+            mesh.vertices.push_back(Vertex{
+                .position = {width * (x + 1) / num_patches, 0.0f, height * (y + 1) / num_patches},
+                .texture_coord = {(x + 1) / num_patches, (y + 1) / num_patches},
+            });
+        }
+    }
+
+    return mesh;
+}

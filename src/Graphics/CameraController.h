@@ -1,0 +1,31 @@
+#pragma once
+
+#include <SFML/System/Time.hpp>
+#include <SFML/Window/Window.hpp>
+
+struct Camera;
+class Keyboard;
+
+struct CameraKeybinds
+{
+    sf::Keyboard::Key forward = sf::Keyboard::Key::W;
+    sf::Keyboard::Key left = sf::Keyboard::Key::A;
+    sf::Keyboard::Key right = sf::Keyboard::Key::D;
+    sf::Keyboard::Key back = sf::Keyboard::Key::S;
+
+    sf::Keyboard::Key up = sf::Keyboard::Key::Space;
+    sf::Keyboard::Key down = sf::Keyboard::Key::Q;
+};
+
+struct CameraControllerOptions
+{
+    bool lock_rotation = false;
+    bool free_movement = true;
+};
+
+void free_camera_controller(const Keyboard& keyboard, Camera& camera, sf::Time dt,
+                            const CameraKeybinds& keybinds, sf::Window& window,
+                            CameraControllerOptions options);
+
+void free_camera_controller_2d(const Keyboard& keyboard, Camera& camera, sf::Time dt,
+                               const CameraKeybinds& keybinds);

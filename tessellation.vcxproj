@@ -156,6 +156,7 @@
     <ClCompile Include="deps\imgui_sfml\imgui-SFML.cpp" />
     <ClCompile Include="deps\imgui_sfml\imgui_impl_opengl3.cpp" />
     <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\FileSelector.cpp" />
     <ClCompile Include="src\Graphics\CameraController.cpp" />
     <ClCompile Include="src\Graphics\Camera.cpp" />
     <ClCompile Include="src\Graphics\PickerTexture.cpp" />
@@ -176,7 +177,6 @@
     <ClCompile Include="src\Util\Profiler.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\..\Downloads\GEBCO_15_Feb_2026_77d8a5c27271\gebco_2025_n35.112_s10.327_w139.73_e148.607.nc" />
     <None Include=".clang-format" />
     <None Include=".gitignore" />
     <None Include="assets\shaders\Empty.glsl" />
@@ -205,6 +205,7 @@
     <ClInclude Include="deps\imgui_sfml\imgui_impl_opengl3.h" />
     <ClInclude Include="deps\imgui_sfml\imgui_inc.h" />
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\FileSelector.h" />
     <ClInclude Include="src\Graphics\CameraController.h" />
     <ClInclude Include="src\Graphics\Camera.h" />
     <ClInclude Include="src\Graphics\PickerTexture.h" />

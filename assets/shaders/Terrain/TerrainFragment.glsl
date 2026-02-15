@@ -1,6 +1,6 @@
 #version 460 core
 
-in  float te_height;
+in float te_height;
 in flat vec3 te_normal;
 out vec4 out_colour;
 

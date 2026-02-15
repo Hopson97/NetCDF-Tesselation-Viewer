@@ -13,11 +13,11 @@ layout(std430, binding = 0) readonly buffer Matrices
 uniform mat4 model_matrix;
 uniform isampler2D height_map;  
 uniform float height_scale;
-uniform float height_offset;
 
 in vec2 tc_texture_coords[];
 
 out float te_height;
+out vec3 te_normal;
 
 void main()
 {
@@ -36,7 +36,7 @@ void main()
     vec2 t1 = (t11 - t10) * u + t10;
     vec2 texCoord = (t1 - t0) * v + t0;
 
-    te_height = texture(height_map, texCoord).r * height_scale - height_offset;
+    te_height = texture(height_map, texCoord).r * height_scale;
 
     // ----------------------------------------------------------------------
     // retrieve control point position coordinates
@@ -58,7 +58,17 @@ void main()
     // displace point along normal
     p += normal * te_height;
 
+
     // ----------------------------------------------------------------------
     // output patch point position in clip space
     gl_Position = matrices.projection * matrices.view * model_matrix * p;
+
+    // Calculate the surface normals for basic slope shadows/lighting
+    float delta = 0.001;
+    float h_center = float(texture(height_map, texCoord).r);
+    float h_right  = float(texture(height_map, texCoord + vec2(delta, 0.0)).r);
+    float h_top    = float(texture(height_map, texCoord + vec2(0.0, delta)).r);
+    vec3 tangent   = vec3(delta, (h_right - h_center) * height_scale, 0.0);
+    vec3 bitangent = vec3(0.0,   (h_top - h_center)   * height_scale, delta);
+    te_normal = normalize(cross(bitangent, tangent));
 }

@@ -19,8 +19,7 @@ class Keyboard;
 
 struct TessellationSettings
 {
-    float height_scale = 16.0f;
-    float height_offset = 16.0f;
+    float height_scale = 1.0f;
     float min_distance = 20;
     float max_distance = 400;
     int min_tess_level = 4;
@@ -32,6 +31,9 @@ struct HeightMap
     gl::Texture2D heightmap;
     size_t width = 0;
     size_t height = 0;
+
+    float min_elevation;
+    float max_elevation;
 };
 
 class Application

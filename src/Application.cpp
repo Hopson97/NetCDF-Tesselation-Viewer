@@ -44,8 +44,28 @@ namespace
 
         NC_CHECK(nc_get_var_short(netcdf_id, elevation_id, elevation.data()));
 
-        heightmap.heightmap.load_from_memory(elevation.data(), heightmap.width, heightmap.height, 1,
-                                             {}, gl::TextureFormat::Red,
+        heightmap.min_elevation = *std::min_element(elevation.begin(), elevation.end());
+        heightmap.max_elevation = *std::max_element(elevation.begin(), elevation.end());
+        std::println(
+            "Loading texture for {}\n Width {}\n Height {}\n Min elevation: {}\n Max elevation: {}",
+            netcdf_file_path.string(), heightmap.width, heightmap.height, heightmap.min_elevation,
+            heightmap.max_elevation);
+
+        // As the OpenGL coordinate system (0, 0 bottom left) is different to NetCDF (0, 0 top
+        // left), the data must be flipped to be correct
+        std::vector<int16_t> flipped_elevation(elevation.size());
+        for (size_t y = 0; y < heightmap.height; ++y)
+        {
+            size_t source_row = (heightmap.height - 1 - y) * heightmap.width;
+            size_t dest_row = y * heightmap.width;
+
+            std::copy(elevation.begin() + source_row,
+                      elevation.begin() + source_row + heightmap.width,
+                      flipped_elevation.begin() + dest_row);
+        }
+
+        heightmap.heightmap.load_from_memory(flipped_elevation.data(), heightmap.width,
+                                             heightmap.height, 1, {}, gl::TextureFormat::Red,
                                              gl::InternalTextureFormat::R16I, GL_SHORT);
         return heightmap;
     }
@@ -57,14 +77,14 @@ Application::Application(sf::Window& window)
           .type = CameraType::Perspective,
           .viewport_size = {window.getSize().x, window.getSize().y},
           .near = 0.1f,
-          .far = 2000.0f,
+          .far = 20000.0f,
           .fov = 90.0f,
       })
     , ortho_camera_(CameraConfig{
           .type = CameraType::OrthographicWorld,
           .viewport_size = {window.getSize().x, window.getSize().y},
           .near = 0.5f,
-          .far = 1000.0f,
+          .far = 10000.0f,
       })
     , window_(window)
 {
@@ -78,10 +98,7 @@ bool Application::init()
     // -----------------------
     // ==== Load textures ====
     // -----------------------
-    // if (auto heightmap =
-    //heightmap_from_netcdf("assets/heightmaps/gebco_2025_n35.112_s10.327_w139.73_e148.607.nc"))
-    if (auto heightmap = heightmap_from_netcdf(
-            "assets/heightmaps/gebco_2025_n35.112_s10.327_w139.73_e148.607.nc"))
+    if (auto heightmap = heightmap_from_netcdf("assets/heightmaps/mediterranean.nc"))
     {
         terrain_heightmap_ = std::move(*heightmap);
     }
@@ -90,17 +107,11 @@ bool Application::init()
         return false;
     }
 
-    // if (!grass_material_.load_from_file("assets/textures/grass.png", 8, false, false) ||
-    //     !crate_material_.load_from_file("assets/textures/crate.png", 8, false, false) ||
-    //     !terrain_heightmap_.load_from_file(
-    //         HEIGHTMAP, 8, false, false,
-    //         gl::TextureParameters{.min_filter = gl::TextureMinFilter::Nearest,
-    //                               .mag_filter = gl::TextureMagFilter::Nearest,
-    //                               .wrap_s = gl::TextureWrap::ClampToEdge,
-    //                               .wrap_t = gl::TextureWrap::ClampToEdge}))
-    //{
-    //     return false;
-    // }
+    if (!grass_material_.load_from_file("assets/textures/grass.png", 8, false, false) ||
+        !crate_material_.load_from_file("assets/textures/crate.png", 8, false, false))
+    {
+        return false;
+    }
 
     // --------------------
     // ==== Load model ====
@@ -116,7 +127,7 @@ bool Application::init()
     // ==== Buffer thr meshes ====
     // ---------------------------
     terrain_mesh_ =
-        generate_patch_terrain_mesh(terrain_heightmap_.width, terrain_heightmap_.height, 64);
+        generate_patch_terrain_mesh(terrain_heightmap_.width, terrain_heightmap_.height, 32);
 
     terrain_mesh_.buffer_no_ebo();
 
@@ -211,8 +222,7 @@ void Application::on_render(bool show_debug_info)
 
     if (ImGui::Begin("Tessellation Settings"))
     {
-        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 1.0f, 128.0f);
-        ImGui::SliderFloat("Height Offset", &tess_settings_.height_offset, 1.0f, 128.0f);
+        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 0.001f, 2.0f);
         ImGui::SliderFloat("Min Distance", &tess_settings_.min_distance, 1.0f, 1000.0f);
         ImGui::SliderFloat("Max Distance", &tess_settings_.max_distance, 1.0f, 1000.0f);
         ImGui::SliderInt("Min Level", &tess_settings_.min_tess_level, 1, 128);
@@ -243,12 +253,13 @@ void Application::on_render(bool show_debug_info)
     terrain_shader_.bind();
     terrain_shader_.set_uniform("view_matrix", p_active_camera_->get_view_matrix());
     terrain_shader_.set_uniform("model_matrix", create_model_matrix({.position = {0, 0, 0}}));
-    terrain_shader_.set_uniform("height_offset", tess_settings_.height_offset);
     terrain_shader_.set_uniform("height_scale", tess_settings_.height_scale);
     terrain_shader_.set_uniform("min_distance", tess_settings_.min_distance);
     terrain_shader_.set_uniform("max_distance", tess_settings_.max_distance);
     terrain_shader_.set_uniform("min_tess_level", tess_settings_.min_tess_level);
     terrain_shader_.set_uniform("max_tess_level", tess_settings_.max_tess_level);
+    terrain_shader_.set_uniform("min_height", terrain_heightmap_.min_elevation);
+    terrain_shader_.set_uniform("max_height", terrain_heightmap_.max_elevation);
     terrain_heightmap_.heightmap.bind(0);
     terrain_mesh_.bind();
 

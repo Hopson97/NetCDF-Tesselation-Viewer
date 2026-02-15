@@ -155,9 +155,14 @@ namespace gl
         glTextureStorage2D(id, levels, static_cast<GLenum>(format), width, height);
 
         // Upload the data
+        if (type == GL_SHORT)
+        {
+
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+        }
         glTextureSubImage2D(id, 0, 0, 0, width, height, static_cast<GLenum>(internal_format), type,
                             data);
-
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         if (filters.min_filter == TextureMinFilter::LinearMipmapLinear ||
             filters.min_filter == TextureMinFilter::LinearMipmapNearest)
         {

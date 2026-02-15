@@ -255,9 +255,6 @@ Mesh3D generate_patch_terrain_mesh(size_t width, size_t height, float num_patche
 {
     Mesh3D mesh;
 
-    //width = 100;
-    //height = 100;
-
     for (float y = 0; y < num_patches - 1; y++)
     {
         for (float x = 0; x < num_patches - 1; x++)

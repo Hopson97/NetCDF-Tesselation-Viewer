@@ -44,12 +44,12 @@ namespace
             move.y -= 1.5f;
         }
 
-        move *= 1.0f;
+        move *= 100.0f;
 
         // Speed up when left shift is held
         if (keyboard.is_key_down(sf::Keyboard::Key::LShift))
         {
-            move *= 50.0f;
+            move *= 5.0f;
         }
 
         return move;

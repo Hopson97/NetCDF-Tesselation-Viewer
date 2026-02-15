@@ -212,7 +212,6 @@ Mesh3D generate_terrain_mesh(int size, int edgeVertices)
 
     return mesh;
 }
-
 HeightMapTerrain generate_terrain_mesh_height_map(const std::filesystem::path& height_map_path)
 {
     sf::Image height_map{height_map_path};
@@ -252,14 +251,12 @@ HeightMapTerrain generate_terrain_mesh_height_map(const std::filesystem::path& h
     return terrain;
 }
 
-Mesh3D generate_patch_terrain_mesh(const std::filesystem::path& height_map_path, float num_patches)
+Mesh3D generate_patch_terrain_mesh(size_t width, size_t height, float num_patches)
 {
     Mesh3D mesh;
 
-    sf::Image height_map{height_map_path};
-
-    auto width = height_map.getSize().x;
-    auto height = height_map.getSize().y;
+    //width = 100;
+    //height = 100;
 
     for (float y = 0; y < num_patches - 1; y++)
     {

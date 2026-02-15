@@ -7,7 +7,7 @@ PickerTexture::PickerTexture(GLuint width, GLuint height)
 
 bool PickerTexture::create()
 {
-    if (!fbo_.attach_colour(gl::TextureFormat::RGBA32F).attach_depth_buffer().is_complete())
+    if (!fbo_.attach_colour(gl::InternalTextureFormat::RGBA32F).attach_depth_buffer().is_complete())
     {
         return false;
     }

@@ -1,12 +1,6 @@
 # Tessellation
 
-OpenGL template project with wrappers around the basic OpenGL objects.
-
-This contains two examples: Application and ApplicationMinimal.
-
-Application has lighting, while ApplicationMinimal is just simple scene with no lighting.
-
-This should be created with https://gist.github.com/Hopson97/b42c686a949d682e16f0d5dc01b48cd2
+Heightmap is from https://betadownload.gebco.net/
 
 ## Building and Running
 

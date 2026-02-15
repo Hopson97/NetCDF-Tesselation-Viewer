@@ -61,7 +61,7 @@ namespace gl
          * @param filters The texture parameters for filtering and wrapping.
          * @return Framebuffer& The framebuffer object itself for method chaining.
          */
-        Framebuffer& attach_colour(TextureFormat format, const TextureParameters& filters = {});
+        Framebuffer& attach_colour(InternalTextureFormat format, const TextureParameters& filters = {});
 
         /**
          * @brief Create the framebuffer as a multisample anti-aliasing (MSAA) framebuffer.

@@ -48,6 +48,7 @@ namespace gl
         set_wrap_s(filters.wrap_s);
         set_wrap_t(filters.wrap_t);
         set_wrap_r(filters.wrap_r);
+        set_anisotropy(filters.anisotropy);
     }
 
     void TextureResource::set_min_filter(TextureMinFilter filter)
@@ -92,6 +93,17 @@ namespace gl
         glTextureParameteri(id, GL_TEXTURE_COMPARE_MODE, static_cast<GLenum>(mode));
     }
 
+    void TextureResource::set_anisotropy(GLfloat level)
+    {
+        assert(id != 0);
+
+        auto max_supported = 0.0f;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &max_supported);
+        level = std::clamp(level, 1.0f, max_supported);
+
+        glTextureParameterf(id, GL_TEXTURE_MAX_ANISOTROPY, level);
+    }
+
     //================================
     // == Texture2D Implementation ===
     //================================
@@ -101,7 +113,7 @@ namespace gl
     }
 
     GLuint Texture2D::create(GLsizei width, GLsizei height, GLsizei levels,
-                             TextureParameters filters, TextureFormat format)
+                             TextureParameters filters, InternalTextureFormat format)
     {
         glTextureStorage2D(id, levels, static_cast<GLenum>(format), width, height);
         set_filters(filters);
@@ -109,7 +121,7 @@ namespace gl
     }
 
     GLuint Texture2D::create_multi_sample(GLsizei width, GLsizei height, GLsizei samples,
-                                          TextureParameters filters, TextureFormat format)
+                                          TextureParameters filters, InternalTextureFormat format)
     {
         glTextureStorage2DMultisample(id, samples, static_cast<GLenum>(format), width, height,
                                       GL_TRUE);
@@ -134,7 +146,7 @@ namespace gl
 
     bool Texture2D::load_from_memory(const void* data, GLsizei width, GLsizei height,
                                      GLsizei levels, TextureParameters filters,
-                                     TextureInternalFormat internal_format, TextureFormat format)
+                                     TextureFormat internal_format, InternalTextureFormat format, GLenum type)
     {
         GLint maxSize = 0;
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
@@ -143,8 +155,8 @@ namespace gl
         glTextureStorage2D(id, levels, static_cast<GLenum>(format), width, height);
 
         // Upload the data
-        glTextureSubImage2D(id, 0, 0, 0, width, height, static_cast<GLenum>(internal_format),
-                            GL_UNSIGNED_BYTE, data);
+        glTextureSubImage2D(id, 0, 0, 0, width, height, static_cast<GLenum>(internal_format), type,
+                            data);
 
         if (filters.min_filter == TextureMinFilter::LinearMipmapLinear ||
             filters.min_filter == TextureMinFilter::LinearMipmapNearest)
@@ -158,18 +170,18 @@ namespace gl
     }
 
     bool Texture2D::load_from_image(const sf::Image& image, GLsizei levels,
-                                    TextureParameters filters, TextureFormat format)
+                                    TextureParameters filters, InternalTextureFormat format)
     {
         const auto w = image.getSize().x;
         const auto h = image.getSize().y;
         const auto data = image.getPixelsPtr();
 
-        return load_from_memory(data, w, h, levels, filters, TextureInternalFormat::RGBA, format);
+        return load_from_memory(data, w, h, levels, filters, TextureFormat::RGBA, format);
     }
 
     bool Texture2D::load_from_file(const std::filesystem::path& path, GLsizei levels,
                                    bool flip_vertically, bool flip_horizontally,
-                                   TextureParameters filters, TextureFormat format)
+                                   TextureParameters filters, InternalTextureFormat format)
     {
         sf::Image image;
         if (!load_image_from_file(path, flip_vertically, flip_horizontally, image))
@@ -267,7 +279,6 @@ namespace gl
         texture_size_ = texture_size;
         max_textures_ = texture_count;
         glTextureStorage3D(id, 1, GL_RGBA8, texture_size, texture_size, texture_count);
-
         set_filters(filters);
     }
 
@@ -290,7 +301,7 @@ namespace gl
                                                                   GLsizei levels,
                                                                   bool flip_vertically,
                                                                   bool flip_horizontally,
-                                                                  TextureInternalFormat format)
+                                                                  TextureFormat format)
     {
         if (texture_count_ == max_textures_)
         {

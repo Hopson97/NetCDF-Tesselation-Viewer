@@ -29,7 +29,6 @@ struct Vertex2D
     glm::vec2 texture_coord{0.0f};
     glm::u8vec4 colour{255};
 
-
     static void build_attribs(gl::VertexArrayObject& vao, gl::BufferObject& vbo)
     {
         vao.add_vertex_buffer(vbo, sizeof(Vertex2D))
@@ -106,12 +105,8 @@ template <typename Vertex>
 bool Mesh<Vertex>::buffer_no_ebo()
 {
 
-
     vao_.reset();
     vbo_.reset();
-
-
-
 
     // Upload the data to the GPU and set up the attributes
     vbo_.buffer_data(vertices);
@@ -191,5 +186,4 @@ struct HeightMapTerrain
 [[nodiscard]] HeightMapTerrain
 generate_terrain_mesh_height_map(const std::filesystem::path& height_map_path);
 
-[[nodiscard]] Mesh3D generate_patch_terrain_mesh(const std::filesystem::path& height_map_path,
-                                                 float num_patches);
+[[nodiscard]] Mesh3D generate_patch_terrain_mesh(size_t width, size_t height, float num_patches);

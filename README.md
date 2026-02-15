@@ -1,6 +1,8 @@
 # Tessellation
 
-Heightmap is from https://betadownload.gebco.net/
+Heightmap viewer using Tessellation shaders.
+
+Data for this can be downloaded from https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2025-grid and https://betadownload.gebco.net/ for subset regions.
 
 ## Building and Running
 

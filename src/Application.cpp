@@ -20,12 +20,14 @@
 namespace
 {
 
-    std::optional<HeightMap> heightmap_from_netcdf(const std::filesystem::path& netcdf_file_path)
+    std::optional<HeightMap> heightmap_from_netcdf(const std::string& nc_file_name)
     {
+        auto path = std::format("./assets/heightmaps/{}", nc_file_name);
+        std::println("Loading {}...", path);
         HeightMap heightmap;
 
         int netcdf_id = 0;
-        NC_CHECK(nc_open(netcdf_file_path.string().c_str(), NC_NOWRITE, &netcdf_id));
+        NC_CHECK(nc_open(path.c_str(), NC_NOWRITE, &netcdf_id));
 
         // Get the width and height of the heightmap
         int latitude_id = 0;
@@ -48,7 +50,7 @@ namespace
         heightmap.max_elevation = *std::max_element(elevation.begin(), elevation.end());
         std::println(
             "Loading texture for {}\n Width {}\n Height {}\n Min elevation: {}\n Max elevation: {}",
-            netcdf_file_path.string(), heightmap.width, heightmap.height, heightmap.min_elevation,
+            path, heightmap.width, heightmap.height, heightmap.min_elevation,
             heightmap.max_elevation);
 
         // As the OpenGL coordinate system (0, 0 bottom left) is different to NetCDF (0, 0 top
@@ -98,7 +100,8 @@ bool Application::init()
     // -----------------------
     // ==== Load textures ====
     // -----------------------
-    if (auto heightmap = heightmap_from_netcdf("assets/heightmaps/mediterranean.nc"))
+    // if (auto heightmap = heightmap_from_netcdf("assets/heightmaps/mediterranean.nc"))
+    if (auto heightmap = heightmap_from_netcdf("europe.nc"))
     {
         terrain_heightmap_ = std::move(*heightmap);
     }
@@ -200,6 +203,11 @@ void Application::on_update(const Keyboard& keyboard, sf::Time dt)
 {
     free_camera_controller(keyboard, *p_active_camera_, dt, camera_keybinds_, window_,
                            camera_options_);
+
+    if (auto map = file_selector_.display_gui())
+    {
+        load_map(*map);
+    }
 }
 
 void Application::on_fixed_update(sf::Time dt)
@@ -222,7 +230,7 @@ void Application::on_render(bool show_debug_info)
 
     if (ImGui::Begin("Tessellation Settings"))
     {
-        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 0.001f, 2.0f);
+        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 0.1f, 10.0f);
         ImGui::SliderFloat("Min Distance", &tess_settings_.min_distance, 1.0f, 1000.0f);
         ImGui::SliderFloat("Max Distance", &tess_settings_.max_distance, 1.0f, 1000.0f);
         ImGui::SliderInt("Min Level", &tess_settings_.min_tess_level, 1, 128);
@@ -263,6 +271,7 @@ void Application::on_render(bool show_debug_info)
     terrain_heightmap_.heightmap.bind(0);
     terrain_mesh_.bind();
 
+    gl::cull_face(gl::Face::Front);
     glDrawArrays(GL_PATCHES, 0, 4 * 32 * 32);
 
     // Ensure GUI etc are rendered using fill
@@ -273,7 +282,7 @@ void Application::render_scene(gl::Shader& shader)
 {
     // Set up the capabilities/ render states
     gl::enable(gl::Capability::DepthTest);
-    // gl::enable(gl::Capability::CullFace);
+    gl::enable(gl::Capability::CullFace);
     gl::cull_face(gl::Face::Back);
     gl::polygon_mode(gl::Face::FrontAndBack,
                      settings_.wireframe ? gl::PolygonMode::Line : gl::PolygonMode::Fill);
@@ -296,4 +305,12 @@ void Application::render_scene(gl::Shader& shader)
     // Draw a loaded model
     shader.set_uniform("model_matrix", create_model_matrix({.position = {12, 1, 12}}));
     model_.draw(shader);
+}
+
+void Application::load_map(const std::string& name)
+{
+    if (auto heightmap = heightmap_from_netcdf(name))
+    {
+        terrain_heightmap_ = std::move(*heightmap);
+    }
 }

@@ -58,6 +58,10 @@ void main()
     // displace point along normal
     p += normal * te_height;
 
+    // The GEBCO grid is 15 arc seconds per "pixel", which is 450m at the equator
+    // So the height should be scaled to match this
+    p.y /= 450.0;
+
 
     // ----------------------------------------------------------------------
     // output patch point position in clip space

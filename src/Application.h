@@ -13,17 +13,18 @@
 #include "Graphics/OpenGL/VertexArrayObject.h"
 #include "Settings.h"
 #include "Util/Maths.h"
+#include "FileSelector.h"
 
 
 class Keyboard;
 
 struct TessellationSettings
 {
-    float height_scale = 1.0f;
+    float height_scale = 2.0f;
     float min_distance = 20;
     float max_distance = 400;
-    int min_tess_level = 4;
-    int max_tess_level = 64;
+    int min_tess_level = 16;
+    int max_tess_level = 256;
 };
 
 struct HeightMap
@@ -49,6 +50,8 @@ class Application
 
   private:
     void render_scene(gl::Shader& shader);
+
+    void load_map(const std::string& name);
 
     Camera perspective_camera_;
     Camera ortho_camera_;
@@ -80,4 +83,6 @@ class Application
     CameraControllerOptions camera_options_;
 
     TessellationSettings tess_settings_;
+
+    FileSelector file_selector_;
 };

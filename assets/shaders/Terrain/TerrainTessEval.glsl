@@ -11,7 +11,7 @@ layout(std430, binding = 0) readonly buffer Matrices
 } matrices;
 
 uniform mat4 model_matrix;
-uniform sampler2D height_map;  
+uniform isampler2D height_map;  
 uniform float height_scale;
 uniform float height_offset;
 
@@ -36,7 +36,7 @@ void main()
     vec2 t1 = (t11 - t10) * u + t10;
     vec2 texCoord = (t1 - t0) * v + t0;
 
-    te_height = texture(height_map, texCoord).y * height_scale - height_offset;
+    te_height = texture(height_map, texCoord).r * height_scale - height_offset;
 
     // ----------------------------------------------------------------------
     // retrieve control point position coordinates

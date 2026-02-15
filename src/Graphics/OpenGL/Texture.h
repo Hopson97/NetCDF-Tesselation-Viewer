@@ -11,13 +11,15 @@
 
 namespace gl
 {
-    enum class TextureInternalFormat
+    enum class TextureFormat
     {
         RGB = GL_RGB,
         RGBA = GL_RGBA,
+
+        Red = GL_RED_INTEGER,
     };
 
-    enum class TextureFormat
+    enum class InternalTextureFormat
     {
         RGB8 = GL_RGB8,
         RGB16 = GL_RGB16,
@@ -28,6 +30,7 @@ namespace gl
         RGBA16F = GL_RGBA16F,
         RGBA32F = GL_RGBA32F,
 
+        R16I = GL_R16I,
         R32I = GL_R32I
     };
 
@@ -81,11 +84,21 @@ namespace gl
         TextureWrap wrap_s = TextureWrap::ClampToEdge;
         TextureWrap wrap_t = TextureWrap::ClampToEdge;
         TextureWrap wrap_r = TextureWrap::ClampToEdge;
+
+        GLfloat anisotropy = 16.0f;
     };
 
     constexpr static TextureParameters TEXTURE_PARAMS_MIPMAP = {
         .min_filter = TextureMinFilter::LinearMipmapLinear,
         .mag_filter = TextureMagFilter::Linear,
+        .wrap_s = TextureWrap::Repeat,
+        .wrap_t = TextureWrap::Repeat,
+        .wrap_r = TextureWrap::Repeat,
+    };
+
+    constexpr static TextureParameters TEXTURE_PARAMS_MIPMAP_NEAREST = {
+        .min_filter = TextureMinFilter::NearestMipmapNearest,
+        .mag_filter = TextureMagFilter::Nearest,
         .wrap_s = TextureWrap::Repeat,
         .wrap_t = TextureWrap::Repeat,
         .wrap_r = TextureWrap::Repeat,
@@ -124,6 +137,7 @@ namespace gl
         void set_wrap_r(TextureWrap wrap);
         void set_compare_function(TextureCompareFunction function);
         void set_compare_mode(TextureCompareMode mode);
+        void set_anisotropy(GLfloat level);
     };
 
     enum class Texture2DTarget
@@ -137,28 +151,31 @@ namespace gl
         Texture2D(Texture2DTarget target = Texture2DTarget::Texture2D);
 
         GLuint create(GLsizei width, GLsizei height, GLsizei levels = 1,
-                      TextureParameters filters = {}, TextureFormat format = TextureFormat::RGB8);
+                      TextureParameters filters = {},
+                      InternalTextureFormat format = InternalTextureFormat::RGB8);
 
         GLuint create_multi_sample(GLsizei width, GLsizei height, GLsizei samples = 4,
                                    TextureParameters filters = {},
-                                   TextureFormat format = TextureFormat::RGB8);
+                                   InternalTextureFormat format = InternalTextureFormat::RGB8);
 
         GLuint create_depth_texture(GLsizei width, GLsizei height);
 
         [[nodiscard]] bool
         load_from_memory(const void* data, GLsizei width, GLsizei height, GLsizei levels,
                          TextureParameters filters = TEXTURE_PARAMS_MIPMAP,
-                         TextureInternalFormat internal_format = TextureInternalFormat::RGBA,
-                         TextureFormat format = TextureFormat::RGBA8);
+                         TextureFormat internal_format = TextureFormat::RGBA,
+                         InternalTextureFormat format = InternalTextureFormat::RGBA8,
+                         GLenum type = GL_UNSIGNED_BYTE);
 
-        [[nodiscard]] bool load_from_image(const sf::Image& image, GLsizei levels,
-                                           TextureParameters filters = TEXTURE_PARAMS_MIPMAP,
-                                           TextureFormat format = TextureFormat::RGBA8);
+        [[nodiscard]] bool
+        load_from_image(const sf::Image& image, GLsizei levels,
+                        TextureParameters filters = TEXTURE_PARAMS_MIPMAP,
+                        InternalTextureFormat format = InternalTextureFormat::RGBA8);
 
-        [[nodiscard]] bool load_from_file(const std::filesystem::path& path, GLsizei levels,
-                                          bool flip_vertically, bool flip_horizontally,
-                                          TextureParameters filters = TEXTURE_PARAMS_MIPMAP,
-                                          TextureFormat format = TextureFormat::RGBA8);
+        [[nodiscard]] bool
+        load_from_file(const std::filesystem::path& path, GLsizei levels, bool flip_vertically,
+                       bool flip_horizontally, TextureParameters filters = TEXTURE_PARAMS_MIPMAP,
+                       InternalTextureFormat format = InternalTextureFormat::RGBA8);
 
         [[nodiscard]] bool is_loaded() const;
 
@@ -206,10 +223,10 @@ namespace gl
                     TextureParameters filters = TEXTURE_PARAMS_MIPMAP);
         GLuint create_depth_texture(GLsizei width, GLsizei height);
 
-        std::pair<bool, GLuint>
-        add_texture_from_file(const std::filesystem::path& path, GLsizei levels,
-                              bool flip_vertically, bool flip_horizontally,
-                              TextureInternalFormat format = TextureInternalFormat::RGBA);
+        std::pair<bool, GLuint> add_texture_from_file(const std::filesystem::path& path,
+                                                      GLsizei levels, bool flip_vertically,
+                                                      bool flip_horizontally,
+                                                      TextureFormat format = TextureFormat::RGBA);
 
       private:
         GLuint texture_size_ = 0;

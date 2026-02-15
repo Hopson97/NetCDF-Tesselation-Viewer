@@ -2,12 +2,55 @@
 
 #include <SFML/Window/Event.hpp>
 #include <imgui.h>
+#include <netcdf.h>
 
 #include "Graphics/CameraController.h"
 #include "Graphics/Lights.h"
 #include "Graphics/OpenGL/GLUtils.h"
 #include "Util/Maths.h"
 #include "Util/Util.h"
+
+#define NC_CHECK(status)                                                                           \
+    if (status != NC_NOERR)                                                                        \
+    {                                                                                              \
+        std::println(std::cerr, "NetCDF error: {}", nc_strerror(status));                          \
+        return {};                                                                                 \
+    }
+
+namespace
+{
+
+    std::optional<HeightMap> heightmap_from_netcdf(const std::filesystem::path& netcdf_file_path)
+    {
+        HeightMap heightmap;
+
+        int netcdf_id = 0;
+        NC_CHECK(nc_open(netcdf_file_path.string().c_str(), NC_NOWRITE, &netcdf_id));
+
+        // Get the width and height of the heightmap
+        int latitude_id = 0;
+        int longitude_id = 0;
+        NC_CHECK(nc_inq_dimid(netcdf_id, "lat", &latitude_id));
+        NC_CHECK(nc_inq_dimid(netcdf_id, "lon", &longitude_id));
+        NC_CHECK(nc_inq_dimlen(netcdf_id, latitude_id, &heightmap.height));
+        NC_CHECK(nc_inq_dimlen(netcdf_id, longitude_id, &heightmap.width));
+
+        // Create a buffer to store the heightmap from the netcdf file
+        std::vector<int16_t> elevation(heightmap.width * heightmap.height);
+
+        // Read the heightmap into a buffer
+        int elevation_id = 0;
+        NC_CHECK(nc_inq_varid(netcdf_id, "elevation", &elevation_id));
+
+        NC_CHECK(nc_get_var_short(netcdf_id, elevation_id, elevation.data()));
+
+        heightmap.heightmap.load_from_memory(elevation.data(), heightmap.width, heightmap.height, 1,
+                                             {}, gl::TextureFormat::Red,
+                                             gl::InternalTextureFormat::R16I, GL_SHORT);
+        return heightmap;
+    }
+
+} // namespace
 
 Application::Application(sf::Window& window)
     : perspective_camera_(CameraConfig{
@@ -35,17 +78,29 @@ bool Application::init()
     // -----------------------
     // ==== Load textures ====
     // -----------------------
-    if (!grass_material_.load_from_file("assets/textures/grass.png", 8, false, false) ||
-        !crate_material_.load_from_file("assets/textures/crate.png", 8, false, false) ||
-        !terrain_heightmap_.load_from_file(
-            HEIGHTMAP, 8, false, false,
-            gl::TextureParameters{.min_filter = gl::TextureMinFilter::Nearest,
-                                  .mag_filter = gl::TextureMagFilter::Nearest,
-                                  .wrap_s = gl::TextureWrap::ClampToEdge,
-                                  .wrap_t = gl::TextureWrap::ClampToEdge}))
+    // if (auto heightmap =
+    //heightmap_from_netcdf("assets/heightmaps/gebco_2025_n35.112_s10.327_w139.73_e148.607.nc"))
+    if (auto heightmap = heightmap_from_netcdf(
+            "assets/heightmaps/gebco_2025_n35.112_s10.327_w139.73_e148.607.nc"))
+    {
+        terrain_heightmap_ = std::move(*heightmap);
+    }
+    else
     {
         return false;
     }
+
+    // if (!grass_material_.load_from_file("assets/textures/grass.png", 8, false, false) ||
+    //     !crate_material_.load_from_file("assets/textures/crate.png", 8, false, false) ||
+    //     !terrain_heightmap_.load_from_file(
+    //         HEIGHTMAP, 8, false, false,
+    //         gl::TextureParameters{.min_filter = gl::TextureMinFilter::Nearest,
+    //                               .mag_filter = gl::TextureMagFilter::Nearest,
+    //                               .wrap_s = gl::TextureWrap::ClampToEdge,
+    //                               .wrap_t = gl::TextureWrap::ClampToEdge}))
+    //{
+    //     return false;
+    // }
 
     // --------------------
     // ==== Load model ====
@@ -60,6 +115,9 @@ bool Application::init()
     // ---------------------------
     // ==== Buffer thr meshes ====
     // ---------------------------
+    terrain_mesh_ =
+        generate_patch_terrain_mesh(terrain_heightmap_.width, terrain_heightmap_.height, 64);
+
     terrain_mesh_.buffer_no_ebo();
 
     box_mesh_.buffer();
@@ -191,7 +249,7 @@ void Application::on_render(bool show_debug_info)
     terrain_shader_.set_uniform("max_distance", tess_settings_.max_distance);
     terrain_shader_.set_uniform("min_tess_level", tess_settings_.min_tess_level);
     terrain_shader_.set_uniform("max_tess_level", tess_settings_.max_tess_level);
-    terrain_heightmap_.bind(0);
+    terrain_heightmap_.heightmap.bind(0);
     terrain_mesh_.bind();
 
     glDrawArrays(GL_PATCHES, 0, 4 * 32 * 32);

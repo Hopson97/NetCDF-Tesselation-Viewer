@@ -66,7 +66,7 @@ namespace gl
         return *textures_[index];
     }
 
-    Framebuffer& Framebuffer::attach_colour(TextureFormat format, const TextureParameters& filters)
+    Framebuffer& Framebuffer::attach_colour(InternalTextureFormat format, const TextureParameters& filters)
     {
         assert(textures_.size() < GL_MAX_COLOR_ATTACHMENTS - 1);
         GLenum attachment = GL_COLOR_ATTACHMENT0 + static_cast<int>(textures_.size());

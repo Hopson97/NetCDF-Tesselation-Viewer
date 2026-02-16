@@ -3,6 +3,7 @@
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/Window.hpp>
 
+#include "FileSelector.h"
 #include "GUI.h"
 #include "Graphics/Camera.h"
 #include "Graphics/CameraController.h"
@@ -11,30 +12,19 @@
 #include "Graphics/OpenGL/Shader.h"
 #include "Graphics/OpenGL/Texture.h"
 #include "Graphics/OpenGL/VertexArrayObject.h"
+#include "HeightMapLoaders.h"
 #include "Settings.h"
 #include "Util/Maths.h"
-#include "FileSelector.h"
-
 
 class Keyboard;
 
 struct TessellationSettings
 {
     float height_scale = 2.0f;
-    float min_distance = 20;
-    float max_distance = 400;
-    int min_tess_level = 16;
+    float min_distance = 250;
+    float max_distance = 1000;
+    int min_tess_level = 4;
     int max_tess_level = 256;
-};
-
-struct HeightMap
-{
-    gl::Texture2D heightmap;
-    size_t width = 0;
-    size_t height = 0;
-
-    float min_elevation;
-    float max_elevation;
 };
 
 class Application
@@ -55,8 +45,9 @@ class Application
 
     Camera perspective_camera_;
     Camera ortho_camera_;
-
     Camera* p_active_camera_ = nullptr;
+    CameraKeybinds camera_keybinds_;
+    CameraControllerOptions camera_options_;
 
     Transform object_transform_;
 
@@ -68,9 +59,9 @@ class Application
     gl::Shader terrain_shader_;
 
     Mesh3D terrain_mesh_;
-    HeightMap terrain_heightmap_;
-
     Mesh3D box_mesh_ = generate_cube_mesh({1.0f, 1.0f, 1.0f});
+
+    TerrainHeightMaps terrain_heightmaps_;
 
     sf::Clock game_time_;
 
@@ -79,8 +70,6 @@ class Application
     sf::Window& window_;
 
     Model model_;
-    CameraKeybinds camera_keybinds_;
-    CameraControllerOptions camera_options_;
 
     TessellationSettings tess_settings_;
 

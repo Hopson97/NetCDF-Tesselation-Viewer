@@ -2,7 +2,6 @@
 
 #include <SFML/Window/Event.hpp>
 #include <imgui.h>
-#include <netcdf.h>
 
 #include "Graphics/CameraController.h"
 #include "Graphics/Lights.h"
@@ -10,76 +9,12 @@
 #include "Util/Maths.h"
 #include "Util/Util.h"
 
-#define NC_CHECK(status)                                                                           \
-    if (status != NC_NOERR)                                                                        \
-    {                                                                                              \
-        std::println(std::cerr, "NetCDF error: {}", nc_strerror(status));                          \
-        return {};                                                                                 \
-    }
-
-namespace
-{
-
-    std::optional<HeightMap> heightmap_from_netcdf(const std::string& nc_file_name)
-    {
-        auto path = std::format("./assets/heightmaps/{}", nc_file_name);
-        std::println("Loading {}...", path);
-        HeightMap heightmap;
-
-        int netcdf_id = 0;
-        NC_CHECK(nc_open(path.c_str(), NC_NOWRITE, &netcdf_id));
-
-        // Get the width and height of the heightmap
-        int latitude_id = 0;
-        int longitude_id = 0;
-        NC_CHECK(nc_inq_dimid(netcdf_id, "lat", &latitude_id));
-        NC_CHECK(nc_inq_dimid(netcdf_id, "lon", &longitude_id));
-        NC_CHECK(nc_inq_dimlen(netcdf_id, latitude_id, &heightmap.height));
-        NC_CHECK(nc_inq_dimlen(netcdf_id, longitude_id, &heightmap.width));
-
-        // Create a buffer to store the heightmap from the netcdf file
-        std::vector<int16_t> elevation(heightmap.width * heightmap.height);
-
-        // Read the heightmap into a buffer
-        int elevation_id = 0;
-        NC_CHECK(nc_inq_varid(netcdf_id, "elevation", &elevation_id));
-
-        NC_CHECK(nc_get_var_short(netcdf_id, elevation_id, elevation.data()));
-
-        heightmap.min_elevation = *std::min_element(elevation.begin(), elevation.end());
-        heightmap.max_elevation = *std::max_element(elevation.begin(), elevation.end());
-        std::println(
-            "Loading texture for {}\n Width {}\n Height {}\n Min elevation: {}\n Max elevation: {}",
-            path, heightmap.width, heightmap.height, heightmap.min_elevation,
-            heightmap.max_elevation);
-
-        // As the OpenGL coordinate system (0, 0 bottom left) is different to NetCDF (0, 0 top
-        // left), the data must be flipped to be correct
-        std::vector<int16_t> flipped_elevation(elevation.size());
-        for (size_t y = 0; y < heightmap.height; ++y)
-        {
-            size_t source_row = (heightmap.height - 1 - y) * heightmap.width;
-            size_t dest_row = y * heightmap.width;
-
-            std::copy(elevation.begin() + source_row,
-                      elevation.begin() + source_row + heightmap.width,
-                      flipped_elevation.begin() + dest_row);
-        }
-
-        heightmap.heightmap.load_from_memory(flipped_elevation.data(), heightmap.width,
-                                             heightmap.height, 1, {}, gl::TextureFormat::Red,
-                                             gl::InternalTextureFormat::R16I, GL_SHORT);
-        return heightmap;
-    }
-
-} // namespace
-
 Application::Application(sf::Window& window)
     : perspective_camera_(CameraConfig{
           .type = CameraType::Perspective,
           .viewport_size = {window.getSize().x, window.getSize().y},
-          .near = 0.1f,
-          .far = 20000.0f,
+          .near = 1.0f,
+          .far = 200000.0f,
           .fov = 90.0f,
       })
     , ortho_camera_(CameraConfig{
@@ -100,15 +35,16 @@ bool Application::init()
     // -----------------------
     // ==== Load textures ====
     // -----------------------
-    // if (auto heightmap = heightmap_from_netcdf("assets/heightmaps/mediterranean.nc"))
-    if (auto heightmap = heightmap_from_netcdf("europe.nc"))
-    {
-        terrain_heightmap_ = std::move(*heightmap);
-    }
-    else
-    {
-        return false;
-    }
+    terrain_heightmaps_ = split_heightmaps_from_netcdf("GEBCO_2025.nc");
+    //// if (auto heightmap = heightmap_from_netcdf("assets/heightmaps/mediterranean.nc"))
+    // if (auto heightmap = heightmap_from_netcdf("GEBCO_2025.nc"))
+    //{
+    //     terrain_heightmap_ = std::move(*heightmap);
+    // }
+    // else
+    //{
+    //     return false;
+    // }
 
     if (!grass_material_.load_from_file("assets/textures/grass.png", 8, false, false) ||
         !crate_material_.load_from_file("assets/textures/crate.png", 8, false, false))
@@ -127,13 +63,10 @@ bool Application::init()
     }
 
     // ---------------------------
-    // ==== Buffer thr meshes ====
+    // ==== Buffer the meshes ====
     // ---------------------------
-    terrain_mesh_ =
-        generate_patch_terrain_mesh(terrain_heightmap_.width, terrain_heightmap_.height, 32);
-
+    terrain_mesh_ = generate_patch_terrain_mesh(MAP_REGION_SIZE, MAP_REGION_SIZE, 32);
     terrain_mesh_.buffer_no_ebo();
-
     box_mesh_.buffer();
 
     // ----------------------------
@@ -230,7 +163,7 @@ void Application::on_render(bool show_debug_info)
 
     if (ImGui::Begin("Tessellation Settings"))
     {
-        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 0.1f, 10.0f);
+        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 1.0f, 16.0f);
         ImGui::SliderFloat("Min Distance", &tess_settings_.min_distance, 1.0f, 1000.0f);
         ImGui::SliderFloat("Max Distance", &tess_settings_.max_distance, 1.0f, 1000.0f);
         ImGui::SliderInt("Min Level", &tess_settings_.min_tess_level, 1, 128);
@@ -260,19 +193,24 @@ void Application::on_render(bool show_debug_info)
 
     terrain_shader_.bind();
     terrain_shader_.set_uniform("view_matrix", p_active_camera_->get_view_matrix());
-    terrain_shader_.set_uniform("model_matrix", create_model_matrix({.position = {0, 0, 0}}));
     terrain_shader_.set_uniform("height_scale", tess_settings_.height_scale);
     terrain_shader_.set_uniform("min_distance", tess_settings_.min_distance);
     terrain_shader_.set_uniform("max_distance", tess_settings_.max_distance);
     terrain_shader_.set_uniform("min_tess_level", tess_settings_.min_tess_level);
     terrain_shader_.set_uniform("max_tess_level", tess_settings_.max_tess_level);
-    terrain_shader_.set_uniform("min_height", terrain_heightmap_.min_elevation);
-    terrain_shader_.set_uniform("max_height", terrain_heightmap_.max_elevation);
-    terrain_heightmap_.heightmap.bind(0);
-    terrain_mesh_.bind();
 
-    gl::cull_face(gl::Face::Front);
-    glDrawArrays(GL_PATCHES, 0, 4 * 32 * 32);
+    for (auto& map : terrain_heightmaps_.maps)
+    {
+        terrain_shader_.set_uniform(
+            "model_matrix", create_model_matrix({.position = {map.region_x, 0, map.region_y}}));
+        terrain_shader_.set_uniform("min_height", terrain_heightmaps_.min_elevation);
+        terrain_shader_.set_uniform("max_height", terrain_heightmaps_.max_elevation);
+        map.heightmap.bind(0);
+        terrain_mesh_.bind();
+
+        gl::cull_face(gl::Face::Front);
+        glDrawArrays(GL_PATCHES, 0, 4 * 32 * 32);
+    }
 
     // Ensure GUI etc are rendered using fill
     gl::polygon_mode(gl::Face::FrontAndBack, gl::PolygonMode::Fill);
@@ -311,6 +249,6 @@ void Application::load_map(const std::string& name)
 {
     if (auto heightmap = heightmap_from_netcdf(name))
     {
-        terrain_heightmap_ = std::move(*heightmap);
+        // terrain_heightmap_ = std::move(*heightmap);
     }
 }

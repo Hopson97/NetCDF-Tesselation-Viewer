@@ -10,13 +10,13 @@ uniform float min_height;
 uniform float max_height; 
 
 // Colour for underwater
-const vec3 color_blue   = vec3(0.0, 0.2, 1.0);
-const vec3 color_purple = vec3(0.5, 0.0, 0.5);
-const vec3 color_red    = vec3(1.0, 0.0, 0.0);
+const vec3 SHALLOW_BLUE = vec3(0.18, 0.91, 0.91);
+const vec3 DEEP_BLUE = vec3(0.0, 0.2, 1.0);
+const vec3 PURPLE = vec3(0.5, 0.0, 0.5);
 
 // Colour for land
-const vec3 sand  = vec3(0.8, 0.7, 0.4);
-const vec3 forest = vec3(0.1, 0.4, 0.1);
+const vec3 land = vec3(0.1, 0.4, 0.1);
+const vec3 rock  = vec3(0.8, 0.7, 0.4);
 const vec3 snow   = vec3(1.0, 1.0, 1.0);
 
 void main()
@@ -30,11 +30,11 @@ void main()
         float underwater_height = clamp(height / min_height, 0.0, 1.0); 
         if (underwater_height < 0.5) 
         {
-            color = mix(color_blue, color_purple, underwater_height * 2.0);
+            color = mix(SHALLOW_BLUE, DEEP_BLUE, underwater_height * 2.0);
         } 
         else 
         {
-            color = mix(color_purple, color_red, (underwater_height - 0.5) * 2.0);
+            color = mix(DEEP_BLUE, PURPLE, (underwater_height - 0.5) * 2.0);
         }
     } 
     else 
@@ -42,11 +42,11 @@ void main()
         float land_heght = clamp(height / max_height, 0.0, 1.0);
         if (land_heght < 0.5) 
         {
-            color = mix(sand, forest, land_heght * 2.0);
+            color = mix(land, rock, land_heght * 2.0);
         } 
         else 
         {
-            color = mix(forest, snow, (land_heght - 0.5) * 2.0);
+            color = mix(rock, snow, (land_heght - 0.5) * 2.0);
         }
     }
 

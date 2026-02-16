@@ -255,9 +255,9 @@ Mesh3D generate_patch_terrain_mesh(size_t width, size_t height, float num_patche
 {
     Mesh3D mesh;
 
-    for (float y = 0; y < num_patches - 1; y++)
+    for (float y = 0; y < num_patches; y++)
     {
-        for (float x = 0; x < num_patches - 1; x++)
+        for (float x = 0; x < num_patches; x++)
         {
             mesh.vertices.push_back(Vertex{
                 .position = {width * x / num_patches, 0.0f, height * y / num_patches},

@@ -165,6 +165,7 @@
     <ClCompile Include="src\Graphics\OpenGL\Framebuffer.cpp" />
     <ClCompile Include="src\Graphics\OpenGL\GLUtils.cpp" />
     <ClCompile Include="src\Graphics\Skybox.cpp" />
+    <ClCompile Include="src\HeightMapLoaders.cpp" />
     <ClCompile Include="src\Util\Keyboard.cpp" />
     <ClCompile Include="src\Util\Maths.cpp" />
     <ClCompile Include="src\Graphics\OpenGL\Shader.cpp" />
@@ -216,6 +217,7 @@
     <ClInclude Include="src\Graphics\OpenGL\GLResource.h" />
     <ClInclude Include="src\Graphics\OpenGL\GLUtils.h" />
     <ClInclude Include="src\Graphics\Skybox.h" />
+    <ClInclude Include="src\HeightMapLoaders.h" />
     <ClInclude Include="src\Util\Keyboard.h" />
     <ClInclude Include="src\Util\Maths.h" />
     <ClInclude Include="src\Graphics\OpenGL\Shader.h" />

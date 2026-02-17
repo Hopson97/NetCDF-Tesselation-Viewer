@@ -1,8 +1,10 @@
 #include <print>
+#include <fstream>
 
 #include <SFML/Window/VideoMode.hpp>
 #include <SFML/Window/Window.hpp>
 #include <glad/glad.h>
+
 
 #include "Application.h"
 
@@ -20,6 +22,9 @@ namespace
 
 int main()
 {
+    // Uncomment to force recreating the map data
+    //split_heightmaps_from_netcdf_to_folder("GEBCO_2025.nc", "assets/map_data");
+
     sf::ContextSettings context_settings;
     context_settings.depthBits = 24;
     context_settings.stencilBits = 8;

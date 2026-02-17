@@ -67,7 +67,7 @@ namespace
         sf::Mouse::setPosition({(int)window.getSize().x / 2, (int)window.getSize().y / 2}, window);
         last_mouse = sf::Mouse::getPosition(window);
 
-        r.x = glm::clamp(r.x, -89.9f, 89.9f);
+        r.x = glm::clamp(r.x, -80.0f, 80.0f);
         if (r.y >= 360.0f)
         {
             r.y = 0.0f;

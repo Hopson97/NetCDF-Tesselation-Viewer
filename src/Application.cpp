@@ -35,7 +35,10 @@ bool Application::init()
     // -----------------------
     // ==== Load textures ====
     // -----------------------
-    terrain_heightmaps_ = split_heightmaps_from_netcdf("GEBCO_2025.nc");
+    //terrain_heightmaps_ = split_heightmaps_from_netcdf("GEBCO_2025.nc");
+    terrain_heightmaps_ = load_heightmaps_from_folder("assets/map_data");
+
+
     //// if (auto heightmap = heightmap_from_netcdf("assets/heightmaps/mediterranean.nc"))
     // if (auto heightmap = heightmap_from_netcdf("GEBCO_2025.nc"))
     //{

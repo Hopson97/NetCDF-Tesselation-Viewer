@@ -1,7 +1,7 @@
 #version 460 core
 
 in float te_height;
-in flat vec3 te_normal;
+in vec3 te_normal;
 out vec4 out_colour;
 
 uniform float height_scale;
@@ -53,7 +53,7 @@ void main()
     // Simple lighting
     vec3 light_dir = normalize(vec3(0.5, 1.0, 0.2)); 
     float diff = max(dot(te_normal, light_dir), 0.0);
-    vec3 ambient = 0.5 * color;
+    vec3 ambient = 0.99 * color;
     vec3 diffuse = diff * color;
     out_colour = vec4(ambient + diffuse, 1.0);
 

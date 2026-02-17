@@ -26,3 +26,6 @@ tessellation/
 *.blend
 *.blend1
 urbania
+
+*.nc
+*.dat

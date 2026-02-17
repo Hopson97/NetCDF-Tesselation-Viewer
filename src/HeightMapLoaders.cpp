@@ -1,10 +1,12 @@
 #include "HeightMapLoaders.h"
 
 #include <format>
+#include <fstream>
 #include <iostream>
 
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Time.hpp>
+#include <future>
 #include <glad/glad.h>
 #include <netcdf.h>
 
@@ -67,11 +69,14 @@ namespace
         }
     };
 
-    struct NetCDFMetadata
+    struct HeightMapMeta
     {
-        int elevation_id = 0;
-        size_t width = 0;
-        size_t height = 0;
+        size_t size;
+        size_t current_width;
+        size_t current_height;
+        float region_x;
+        float region_y;
+        std::vector<int16_t> elevation;
     };
 } // namespace
 
@@ -123,11 +128,10 @@ TerrainHeightMaps split_heightmaps_from_netcdf(const std::string& nc_file_name, 
     std::vector<int16_t> elevation(size_per_map * size_per_map);
     std::vector<int16_t> flipped_elevation(elevation.size());
 
-    sf::Clock clock;
-
     size_t max_height = netcdf.height;
     size_t max_width = netcdf.width - MAP_REGION_SIZE;
 
+    sf::Clock clock;
     for (size_t y = 0; y < max_height; y += size_per_map)
     {
         for (size_t x = 0; x < max_width; x += size_per_map)
@@ -155,15 +159,13 @@ TerrainHeightMaps split_heightmaps_from_netcdf(const std::string& nc_file_name, 
 
             auto min_elevation = *std::min_element(elevation.begin(), elevation.end());
             auto max_elevation = *std::max_element(elevation.begin(), elevation.end());
-            auto& heightmap = terrain_heightmaps.maps.emplace_back(HeightMap{
-                .width = current_width,
-                .height = current_height,
-                .region_x = static_cast<float>(x),
-                .region_y = static_cast<float>(max_height - y - current_height),
-                .min_elevation = static_cast<float>(min_elevation),
-                .max_elevation = static_cast<float>(max_elevation)
-            });
-
+            auto& heightmap = terrain_heightmaps.maps.emplace_back(
+                HeightMap{.width = current_width,
+                          .height = current_height,
+                          .region_x = static_cast<float>(x),
+                          .region_y = static_cast<float>(max_height - y - current_height),
+                          .min_elevation = static_cast<float>(min_elevation),
+                          .max_elevation = static_cast<float>(max_elevation)});
 
             terrain_heightmaps.min_elevation =
                 std::min(heightmap.min_elevation, terrain_heightmaps.min_elevation);
@@ -183,5 +185,144 @@ TerrainHeightMaps split_heightmaps_from_netcdf(const std::string& nc_file_name, 
     std::println("Loaded {} heightmaps in {} seconds", terrain_heightmaps.maps.size(),
                  clock.getElapsedTime().asSeconds());
     netcdf.close();
+    return terrain_heightmaps;
+}
+
+
+bool split_heightmaps_from_netcdf_to_folder(const std::string& nc_file_name,
+                                            const std::string& output_path, size_t size_per_map)
+{
+    GebcoNCFile netcdf;
+    netcdf.open(nc_file_name);
+
+    int16_t all_min_elevation = 0;
+    int16_t all_max_elevation = 0;
+
+    std::vector<int16_t> elevation(size_per_map * size_per_map);
+    std::vector<int16_t> flipped_elevation(elevation.size());
+
+    sf::Clock clock;
+    for (size_t y = size_per_map; y < netcdf.height; y += size_per_map)
+    {
+        for (size_t x = 0; x < netcdf.width; x += size_per_map)
+        {
+            std::fill(elevation.begin(), elevation.end(), 0);
+
+            size_t current_width = std::min(size_per_map, netcdf.width - x);
+            size_t current_height = std::min(size_per_map, netcdf.height - y);
+
+            std::println("Loading sub region ({}, {}) with size ({} {})", x, y, current_width,
+                         current_height);
+
+            // Prevents smaller regions from overlapping
+            if (current_height != MAP_REGION_SIZE)
+            {
+                continue;
+            }
+
+            // Loads a sub-region of the netcdf data
+            size_t start[] = {y, x};
+            size_t count[] = {current_height, current_width};
+
+            NC_CHECK(nc_get_vara_short(netcdf.netcdf_id, netcdf.elevation_id, start, count,
+                                       elevation.data()));
+
+            // Get the stats
+            auto min_elevation = *std::min_element(elevation.begin(), elevation.end());
+            auto max_elevation = *std::max_element(elevation.begin(), elevation.end());
+            all_min_elevation = std::min(all_min_elevation, min_elevation);
+            all_max_elevation = std::max(all_max_elevation, max_elevation);
+
+            // Flip the heightmap so it can directly loaded
+            flip_heightmap(elevation, flipped_elevation, current_width, current_height);
+
+            auto region_x = static_cast<float>(x);
+            auto region_y = static_cast<float>(netcdf.height - y - current_height);
+
+            // Write the file
+            std::ofstream out_file(std::format("{}/{}_{}.dat", output_path, region_x, region_y),
+                                   std::ios::binary);
+
+            auto size = flipped_elevation.size();
+            out_file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+            out_file.write(reinterpret_cast<const char*>(&current_width), sizeof(current_width));
+            out_file.write(reinterpret_cast<const char*>(&current_height), sizeof(current_height));
+            out_file.write(reinterpret_cast<const char*>(&region_x), sizeof(region_x));
+            out_file.write(reinterpret_cast<const char*>(&region_y), sizeof(region_y));
+
+            out_file.write(reinterpret_cast<const char*>(flipped_elevation.data()),
+                           size * sizeof(int16_t));
+        }
+    }
+    std::ofstream info_file(std::format("{}/meta.txt", output_path));
+    info_file << all_min_elevation << " " << all_max_elevation;
+
+    std::println("Saved heightmaps in {} seconds", clock.getElapsedTime().asSeconds());
+    netcdf.close();
+    return true;
+}
+
+TerrainHeightMaps load_heightmaps_from_folder(const std::string& folder)
+{
+    sf::Clock clock;
+
+    TerrainHeightMaps terrain_heightmaps;
+    std::vector<std::future<HeightMapMeta>> futures;
+    for (auto& entry : std::filesystem::directory_iterator(folder))
+    {
+        std::string filename = entry.path().filename().string();
+        std::string ext = entry.path().extension().string();
+        if (ext == ".dat")
+        {
+
+            futures.push_back(std::async(
+                std::launch::async,
+                [path = entry.path()]()
+                {
+                    std::ifstream in_file(path, std::ios::binary);
+
+                    HeightMapMeta data;
+                    in_file.read(reinterpret_cast<char*>(&data.size), sizeof(data.size));
+                    in_file.read(reinterpret_cast<char*>(&data.current_width),
+                                 sizeof(data.current_width));
+                    in_file.read(reinterpret_cast<char*>(&data.current_height),
+                                 sizeof(data.current_height));
+                    in_file.read(reinterpret_cast<char*>(&data.region_x), sizeof(data.region_x));
+                    in_file.read(reinterpret_cast<char*>(&data.region_y), sizeof(data.region_y));
+
+                    data.elevation.resize(data.size);
+                    in_file.read(reinterpret_cast<char*>(data.elevation.data()),
+                                 data.size * sizeof(int16_t));
+
+                    return data;
+                }));
+        }
+        else if (filename == "meta.txt")
+        {
+            std::ifstream in_file(entry.path());
+            in_file >> terrain_heightmaps.min_elevation >> terrain_heightmaps.max_elevation;
+        }
+    }
+    for (auto& f : futures)
+    {
+        auto result = f.get();
+
+        auto& heightmap = terrain_heightmaps.maps.emplace_back(HeightMap{
+            .width = result.current_width,
+            .height = result.current_height,
+            .region_x = result.region_x,
+            .region_y = result.region_y,
+        });
+
+        if (!heightmap.heightmap.load_from_memory(result.elevation.data(), heightmap.width,
+                                                  heightmap.height, 1, {}, gl::TextureFormat::Red,
+                                                  gl::InternalTextureFormat::R16I, GL_SHORT))
+        {
+            return {};
+        }
+    }
+
+    std::println("Created {} heightmaps in {} seconds", terrain_heightmaps.maps.size(),
+                 clock.getElapsedTime().asSeconds());
     return terrain_heightmaps;
 }

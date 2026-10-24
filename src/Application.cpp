@@ -166,9 +166,9 @@ void Application::on_render(bool show_debug_info)
 
     if (ImGui::Begin("Tessellation Settings"))
     {
-        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 1.0f, 16.0f);
-        ImGui::SliderFloat("Min Distance", &tess_settings_.min_distance, 1.0f, 1000.0f);
-        ImGui::SliderFloat("Max Distance", &tess_settings_.max_distance, 1.0f, 1000.0f);
+        ImGui::SliderFloat("Height Scale", &tess_settings_.height_scale, 1.0f, 32.0f);
+        ImGui::SliderFloat("Min Distance", &tess_settings_.min_distance, 1.0f, 5500.0f);
+        ImGui::SliderFloat("Max Distance", &tess_settings_.max_distance, 1.0f, 5500.0f);
         ImGui::SliderInt("Min Level", &tess_settings_.min_tess_level, 1, 128);
         ImGui::SliderInt("Max Level", &tess_settings_.max_tess_level, 1, 256);
     }

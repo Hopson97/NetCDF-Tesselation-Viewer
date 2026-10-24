@@ -22,7 +22,7 @@ struct TessellationSettings
 {
     float height_scale = 2.0f;
     float min_distance = 250;
-    float max_distance = 1000;
+    float max_distance = 3500.0f;
     int min_tess_level = 4;
     int max_tess_level = 256;
 };

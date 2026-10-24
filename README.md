@@ -1,8 +1,15 @@
-# Tessellation
+# Tessellation Height Map and Bathymetry Viewer
 
-Heightmap viewer using Tessellation shaders.
+Height Map viewer using Tessellation shaders.
 
-Data for this can be downloaded from https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2025-grid and https://betadownload.gebco.net/ for subset regions.
+Height maps must be in the NetCDF format (.nc files). These can be downloaded from https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2025-grid, or https://download.gebco.net/ for subset regions.
+
+These must be placed in the `assets/heightmaps` directory. 
+
+The program is currently hardcoded to use a file `assets/heightmaps/GEBCO_2025.nc`. These files are not included in the project as they are several gigabytes in size.
+
+![Example Zooming](assets/Example.gif)
+![Example Zooming 2](assets/Example2.gif)
 
 ## Building and Running
 

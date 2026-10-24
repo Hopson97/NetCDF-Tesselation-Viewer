@@ -201,6 +201,7 @@
   <ItemGroup>
     <ClInclude Include="deps\glad\glad.h" />
     <ClInclude Include="deps\glad\khrplatform.h" />
+    <ClInclude Include="deps\imgui_sfml\imconfig-SFML.h" />
     <ClInclude Include="deps\imgui_sfml\imgui-SFML.h" />
     <ClInclude Include="deps\imgui_sfml\imgui-SFML_export.h" />
     <ClInclude Include="deps\imgui_sfml\imgui_impl_opengl3.h" />
